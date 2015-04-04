@@ -1,5 +1,5 @@
 /*
-  Calculates clustering with maximized minimum distance in O(m*n)
+  Calculates clustering with maximized minimum distance in O(m*log2(n))
 
   @author Evgeniy Kuznetsov
   @date 03.04.2015
@@ -11,11 +11,10 @@
 // @return {Object}
 function maxSpacingKClustering(edges, cnum) {
 
-  var clusters = [];
-  var ufind = {};
+  var clusters = [], ufind = {};
 
-  // Sort edges
-  var sorted = edges.sort( function(f,s){ return f[2] - s[2]; } );
+  // Make a duplicate of the array and sort edges in increasing order of distances
+  var sorted = edges.slice(0).sort( function(f,s){ return f[2] - s[2]; } );
 
   // Update ufind data structure
   for(var i in sorted) {
@@ -25,36 +24,34 @@ function maxSpacingKClustering(edges, cnum) {
     if(ufind[n2] == undefined) ufind[n2] = clusters.push([n2]) - 1;
   }
 
-  var curclusters = clusters.length;
+  var curclusters = clusters.length, cheap = undefined;
 
-  // While clusters != cnum
   while(sorted.length != 0) {
 
     // Get cheapest edge
-    var cheap = sorted.shift(),
-        n1 = cheap[0],
-        n2 = cheap[1];
+    cheap = sorted.shift();
 
-    // Merge nodes
-    var n1cluster = ufind[n1],
-        n2cluster = ufind[n2];
+    var n1cluster = ufind[cheap[0]],
+        n2cluster = ufind[cheap[1]];
 
     if(n1cluster != n2cluster) {
+
+      // Stop exactly when next node is about to be added
+      if(curclusters == cnum) break;
+
       // Update keys for all vertices in n2cluster
       for(var i in clusters[n2cluster]) ufind[clusters[n2cluster][i]] = n1cluster;
 
+      // Merge clusters
       clusters[n1cluster] = clusters[n1cluster].concat( clusters[n2cluster] );
       clusters[n2cluster] = undefined;
       curclusters--;
-    } else {
-      if(curclusters == cnum) break;
     }
 
   }
 
   clusters = clusters.filter( function(e){ return e != undefined } );
-
-  var mind = clusters.length == 1 ? 0 : sorted[0][2];
+  var mind = clusters.length == 1 ? 0 : cheap[2];
 
   return {clusters: clusters, mindistance: mind};
 }
@@ -71,8 +68,8 @@ var sampleGraph = [
   [5, 6, 5]
 ];
 
-console.log("Case 1:", maxSpacingKClustering(sampleGraph, 3));
-
+console.log("Case 1:", maxSpacingKClustering(sampleGraph, 3).mindistance == 5);
+console.log("Case 2:", maxSpacingKClustering(sampleGraph, 3).mindistance == 5);
 
 
 
